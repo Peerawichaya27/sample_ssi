@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VC and VP Generation</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.umd.min.js"></script>
+    <style>
+        .message {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Generate Verifiable Credentials and Presentations</h1>
+    
+    <div>
+        <h2>Create Verifiable Credential</h2>
+        <input type="text" id="studentId" placeholder="Student ID" required>
+        <input type="text" id="studentName" placeholder="Student Name" required>
+        <button onclick="createVC()">Create VC</button>
+        <div id="vcMessage" class="message"></div> <!-- Message area for VC -->
+        <h3>Generated Verifiable Credential:</h3>
+        <pre id="vcOutput"></pre> <!-- Area to display VC -->
+    </div>
+
+    <div>
+        <h2>Create Verifiable Presentation</h2>
+        <button id="createVPButton" onclick="createVP()" disabled>Create VP</button>
+        <div id="vpMessage" class="message"></div> <!-- Message area for VP -->
+        <h3>Generated Verifiable Presentation:</h3>
+        <pre id="vpOutput"></pre> <!-- Area to display VP -->
+    </div>
+
+    <div>
+        <h2>Check Verifiable Presentation</h2>
+        <input type="text" id="vpHash" placeholder="VP Hash" required>
+        <button onclick="checkVP()">Check VP</button>
+        <div id="vpCheckMessage" class="message"></div> <!-- Message area for VP check -->
+    </div>
+
+    <script>
+        let generatedVC = null; // Store the generated VC
+        let generatedVP = null; // Store the generated VP
+
+        async function createVC() {
+            const studentId = document.getElementById('studentId').value;
+            const studentName = document.getElementById('studentName').value;
+
+            // Clear previous messages and outputs
+            document.getElementById('vcMessage').innerHTML = '';
+            document.getElementById('vcOutput').innerHTML = '';
+
+            // Call your backend API to create the VC
+            const response = await fetch('/create-vc', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ studentId, studentName })
+            });
+
+            if (response.ok) {
+                generatedVC = await response.json();
+                console.log("Generated VC:", generatedVC);
+                document.getElementById('createVPButton').disabled = false; // Enable the VP button
+                document.getElementById('vcMessage').innerHTML = 'Verifiable Credential created successfully!'; // Success message
+                document.getElementById('vcMessage').className = 'message success'; // Apply success class
+                document.getElementById('vcOutput').innerHTML = JSON.stringify(generatedVC, null, 2); // Show VC details
+            } else {
+                console.error('Error creating VC:', response.statusText);
+                document.getElementById('vcMessage').innerHTML = 'Error creating Verifiable Credential.'; // Error message
+                document.getElementById('vcMessage').className = 'message error'; // Apply error class
+            }
+        }
+
+        async function createVP() {
+            if (!generatedVC) {
+                console.error('No VC generated yet');
+                document.getElementById('vpMessage').innerHTML = 'No Verifiable Credential available for creating a Presentation.'; // Error message
+                document.getElementById('vpMessage').className = 'message error'; // Apply error class
+                return;
+            }
+
+            // Clear previous messages and outputs
+            document.getElementById('vpMessage').innerHTML = '';
+            document.getElementById('vpOutput').innerHTML = '';
+
+            // Call your backend API to create the VP
+            const response = await fetch('/create-vp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vc: generatedVC })
+            });
+
+            if (response.ok) {
+                generatedVP = await response.json();
+                console.log("Generated VP:", generatedVP);
+                document.getElementById('vpMessage').innerHTML = 'Verifiable Presentation created successfully!'; // Success message
+                document.getElementById('vpMessage').className = 'message success'; // Apply success class
+                document.getElementById('vpOutput').innerHTML = JSON.stringify(generatedVP, null, 2); // Show VP details
+            } else {
+                console.error('Error creating VP:', response.statusText);
+                document.getElementById('vpMessage').innerHTML = 'Error creating Verifiable Presentation.'; // Error message
+                document.getElementById('vpMessage').className = 'message error'; // Apply error class
+            }
+        }
+
+        async function checkVP() {
+            const vpHash = document.getElementById('vpHash').value;
+
+            // Clear previous messages
+            document.getElementById('vpCheckMessage').innerHTML = '';
+
+            // Call your backend API to check the VP
+            const response = await fetch('/check-vp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vpHash })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.exists) {
+                    document.getElementById('vpCheckMessage').innerHTML = 'Verifiable Presentation exists on the blockchain.'; // Success message
+                    document.getElementById('vpCheckMessage').className = 'message success'; // Apply success class
+                } else {
+                    document.getElementById('vpCheckMessage').innerHTML = 'No Verifiable Presentation found on the blockchain.'; // Error message
+                    document.getElementById('vpCheckMessage').className = 'message error'; // Apply error class
+                }
+            } else {
+                console.error('Error checking VP:', response.statusText);
+                document.getElementById('vpCheckMessage').innerHTML = 'Error checking Verifiable Presentation.'; // Error message
+                document.getElementById('vpCheckMessage').className = 'message error'; // Apply error class
+            }
+        }
+    </script>
+</body>
+</html>
